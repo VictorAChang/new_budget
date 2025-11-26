@@ -1,6 +1,5 @@
 pandas
 streamlit
-plotly>=6.1.1
+matplotlib
 xlsxwriter
-kaleido>=0.2.1
 pillow

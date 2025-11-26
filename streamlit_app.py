@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import io
 import xlsxwriter
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from PIL import Image
 
 st.set_page_config(page_title="Chang Budget", layout="centered")
@@ -238,19 +239,31 @@ remaining_after_savings = surplus - total_savings_allocation
 col1, col2 = st.columns(2)
 
 # Create fig1 - Budget Distribution
-fig1 = go.Figure(data=[go.Pie(
-    labels=['Total Income', 'Total Expenses', 'Savings Allocation', 'Remaining'],
-    values=[total_income, total_expenses, total_savings_allocation, max(0, remaining_after_savings)],
-    hole=.3,
-    marker=dict(colors=['#43c0d1', '#a64957', '#7cb342', '#fdd835'])
-)])
-fig1.update_layout(title="Budget Distribution", showlegend=True)
+fig1, ax1 = plt.subplots(figsize=(9, 7))
+colors1 = ['#0078D4', '#a64957', '#7cb342', '#fdd835']
+labels1 = ['Total Income', 'Total Expenses', 'Savings Allocation', 'Remaining']
+values1 = [total_income, total_expenses, total_savings_allocation, max(0, remaining_after_savings)]
+explode1 = (0.05, 0.05, 0.05, 0.05)
+wedges, texts, autotexts = ax1.pie(
+    values1, 
+    labels=labels1, 
+    colors=colors1, 
+    autopct=lambda pct: f'${pct * sum(values1) / 100:,.0f}\n({pct:.1f}%)',
+    startangle=90,
+    explode=explode1,
+    shadow=True,
+    textprops={'fontsize': 10, 'weight': 'bold'}
+)
+ax1.set_title("Budget Distribution", fontsize=16, fontweight='bold', pad=20)
+for autotext in autotexts:
+    autotext.set_color('white')
+    autotext.set_fontweight('bold')
 
 with col1:
     st.markdown("##### Income vs Expenses vs Savings")
-    st.plotly_chart(fig1, use_container_width=True)
+    st.pyplot(fig1)
 
-# Create fig2 - Expense Breakdown
+# Create fig2 - Expense Breakdown (Top 5 + Other)
 expense_categories = []
 expense_amounts = []
 
@@ -283,39 +296,69 @@ for item in st.session_state.additional_expenses:
     expense_categories.append(item['Expense'])
     expense_amounts.append(item['Amount'])
 
-fig2 = go.Figure(data=[go.Pie(
-    labels=expense_categories,
-    values=expense_amounts,
-    marker=dict(colors=['#e57373', '#f06292', '#ba68c8', '#9575cd', '#7986cb', '#64b5f6', '#4fc3f7', '#4dd0e1', '#4db6ac'])
-)])
-fig2.update_layout(title="Where Your Money Goes", showlegend=True)
+# Sort expenses and keep top 5, group rest as "Other"
+expense_data = list(zip(expense_categories, expense_amounts))
+expense_data.sort(key=lambda x: x[1], reverse=True)
+
+if len(expense_data) > 5:
+    top_5 = expense_data[:5]
+    other_amount = sum(amt for _, amt in expense_data[5:])
+    final_categories = [cat for cat, _ in top_5] + ['Other Expenses']
+    final_amounts = [amt for _, amt in top_5] + [other_amount]
+else:
+    final_categories = [cat for cat, _ in expense_data]
+    final_amounts = [amt for _, amt in expense_data]
+
+fig2, ax2 = plt.subplots(figsize=(9, 7))
+colors2 = ['#0078D4', '#50E6FF', '#7cb342', '#fdd835', '#f06292', '#b0b0b0']
+explode2 = [0.05] * len(final_amounts)
+
+wedges2, texts2, autotexts2 = ax2.pie(
+    final_amounts, 
+    labels=final_categories, 
+    colors=colors2[:len(final_categories)], 
+    autopct=lambda pct: f'${pct * sum(final_amounts) / 100:,.0f}\n({pct:.1f}%)',
+    startangle=90,
+    explode=explode2,
+    shadow=True,
+    textprops={'fontsize': 10, 'weight': 'bold'}
+)
+ax2.set_title("Where Your Money Goes (Top 5)", fontsize=16, fontweight='bold', pad=20)
+
+for autotext in autotexts2:
+    autotext.set_color('white')
+    autotext.set_fontweight('bold')
 
 with col2:
     st.markdown("##### Expense Breakdown")
-    st.plotly_chart(fig2, use_container_width=True)
+    st.pyplot(fig2)
 
 # Create fig3 - Savings Goals Progress
 fig3 = None
 if "savings_goals" in st.session_state and st.session_state.savings_goals:
     st.markdown("##### Savings Goals Progress")
-    fig3 = go.Figure()
+    fig3, ax3 = plt.subplots(figsize=(10, 6))
     
-    for goal in st.session_state.savings_goals:
-        fig3.add_trace(go.Bar(
-            name=goal['Goal'],
-            x=[goal['Goal']],
-            y=[goal['Monthly']],
-            text=[f"${goal['Monthly']:,.2f}/mo<br>{goal['Months']:.1f} months to ${goal['Target']:,.2f}"],
-            textposition='auto',
-        ))
+    goal_names = [goal['Goal'] for goal in st.session_state.savings_goals]
+    goal_amounts = [goal['Monthly'] for goal in st.session_state.savings_goals]
     
-    fig3.update_layout(
-        title="Monthly Savings Contributions",
-        yaxis_title="Monthly Amount ($)",
-        showlegend=False,
-        height=400
-    )
-    st.plotly_chart(fig3, use_container_width=True)
+    colors3 = ['#0078D4', '#50E6FF', '#7cb342', '#fdd835', '#f06292']
+    bars = ax3.bar(goal_names, goal_amounts, color=colors3[:len(goal_names)], edgecolor='black', linewidth=1.5)
+    ax3.set_ylabel('Monthly Amount ($)', fontsize=13, fontweight='bold')
+    ax3.set_title('Monthly Savings Contributions', fontsize=16, fontweight='bold', pad=20)
+    ax3.tick_params(axis='x', rotation=45, labelsize=10)
+    ax3.grid(axis='y', alpha=0.3, linestyle='--')
+    ax3.set_axisbelow(True)
+    
+    # Add value labels on bars
+    for i, (bar, goal) in enumerate(zip(bars, st.session_state.savings_goals)):
+        height = bar.get_height()
+        ax3.text(bar.get_x() + bar.get_width()/2., height,
+                f'${height:,.2f}/mo\n{goal["Months"]:.1f} months',
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    plt.tight_layout()
+    st.pyplot(fig3)
 
 # 📥 Downloadable & Visual Budget Spreadsheet
 st.subheader("⬇️ Download Your Budget Spreadsheet")
@@ -427,32 +470,36 @@ def to_excel(df, chart_fig1, chart_fig2, chart_fig3=None):
     worksheet.set_column(2, 2, 18)
     
     # Add charts to the visualizations sheet
-    charts_worksheet.write('A1', 'Budget Visualizations', workbook.add_format({'bold': True, 'font_size': 14}))
+    title_format = workbook.add_format({'bold': True, 'font_size': 14, 'color': '#0078D4'})
+    charts_worksheet.write('A1', 'Budget Visualizations', title_format)
     
-    # Save plotly charts as images and insert them
     try:
+        # Save matplotlib figures as images
         # Save fig1 (Budget Distribution)
-        img1_bytes = chart_fig1.to_image(format="png", width=800, height=600, engine="kaleido")
-        img1_stream = io.BytesIO(img1_bytes)
-        charts_worksheet.insert_image('A2', 'budget_distribution.png', {'image_data': img1_stream})
+        img1_buffer = io.BytesIO()
+        chart_fig1.savefig(img1_buffer, format='png', dpi=100, bbox_inches='tight')
+        img1_buffer.seek(0)
+        charts_worksheet.insert_image('A3', 'budget_distribution.png', {'image_data': img1_buffer})
         
         # Save fig2 (Expense Breakdown)
-        img2_bytes = chart_fig2.to_image(format="png", width=800, height=600, engine="kaleido")
-        img2_stream = io.BytesIO(img2_bytes)
-        charts_worksheet.insert_image('A35', 'expense_breakdown.png', {'image_data': img2_stream})
+        img2_buffer = io.BytesIO()
+        chart_fig2.savefig(img2_buffer, format='png', dpi=100, bbox_inches='tight')
+        img2_buffer.seek(0)
+        charts_worksheet.insert_image('A38', 'expense_breakdown.png', {'image_data': img2_buffer})
         
         # Save fig3 (Savings Goals) if it exists
         if chart_fig3 is not None:
-            img3_bytes = chart_fig3.to_image(format="png", width=800, height=600, engine="kaleido")
-            img3_stream = io.BytesIO(img3_bytes)
-            charts_worksheet.insert_image('A68', 'savings_goals.png', {'image_data': img3_stream})
-            
-        charts_worksheet.write('A100', 'Charts exported successfully!')
+            img3_buffer = io.BytesIO()
+            chart_fig3.savefig(img3_buffer, format='png', dpi=100, bbox_inches='tight')
+            img3_buffer.seek(0)
+            charts_worksheet.insert_image('A73', 'savings_goals.png', {'image_data': img3_buffer})
     except Exception as e:
         # If image export fails, show the error
-        charts_worksheet.write('A2', f'Chart export error: {str(e)}')
-        charts_worksheet.write('A3', 'Note: This may require kaleido package compatibility.')
-        charts_worksheet.write('A4', 'Charts are still available in the web app view.')
+        charts_worksheet.write('A3', f'Chart export error: {str(e)}')
+        charts_worksheet.write('A4', 'Charts are available in the web app view.')
+    
+    # Set column width
+    charts_worksheet.set_column(0, 0, 100)
 
     workbook.close()
     output.seek(0)
