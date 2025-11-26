@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import io
 import xlsxwriter
+import plotly.graph_objects as go
+from PIL import Image
 
 st.set_page_config(page_title="Chang Budget", layout="centered")
 
@@ -98,10 +100,19 @@ with st.form("add_income_form"):
             "Source": add_income_name,
             "Amount": add_income_amount
         })
+        st.rerun()
 
 if st.session_state.additional_income:
-    add_income_df = pd.DataFrame(st.session_state.additional_income)
-    st.dataframe(add_income_df)
+    for i, income_item in enumerate(st.session_state.additional_income):
+        col1, col2, col3 = st.columns([3, 2, 1])
+        with col1:
+            st.markdown(f"**{income_item['Source']}**")
+        with col2:
+            st.markdown(f"${income_item['Amount']:,.2f}")
+        with col3:
+            if st.button("🗑️", key=f"delete_income_{i}"):
+                st.session_state.additional_income.pop(i)
+                st.rerun()
     total_additional_income = sum(item["Amount"] for item in st.session_state.additional_income)
 else:
     total_additional_income = 0
@@ -120,10 +131,19 @@ with st.form("add_expense_form"):
             "Expense": add_expense_name,
             "Amount": add_expense_amount
         })
+        st.rerun()
 
 if st.session_state.additional_expenses:
-    add_expense_df = pd.DataFrame(st.session_state.additional_expenses)
-    st.dataframe(add_expense_df)
+    for i, expense in enumerate(st.session_state.additional_expenses):
+        col1, col2, col3 = st.columns([3, 2, 1])
+        with col1:
+            st.markdown(f"**{expense['Expense']}**")
+        with col2:
+            st.markdown(f"${expense['Amount']:,.2f}")
+        with col3:
+            if st.button("🗑️", key=f"delete_expense_{i}"):
+                st.session_state.additional_expenses.pop(i)
+                st.rerun()
     total_additional_expenses = sum(item["Amount"] for item in st.session_state.additional_expenses)
 else:
     total_additional_expenses = 0
@@ -157,6 +177,7 @@ with st.form("add_savings_goal_form"):
             "Monthly": goal_monthly,
             "Months": months_to_goal
         })
+        st.rerun()
 
 if st.session_state.savings_goals:
     st.markdown("#### 📊 Your Savings Goals")
@@ -204,8 +225,97 @@ if st.session_state.savings_goals:
 else:
     st.info("No savings goals yet. Create one above to track your progress!")
 
+# 📊 Visualizations
+st.subheader("📊 Budget Visualizations")
 
+# Calculate savings allocation
+total_savings_allocation = 0
+if "savings_goals" in st.session_state and st.session_state.savings_goals:
+    total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
 
+remaining_after_savings = surplus - total_savings_allocation
+
+col1, col2 = st.columns(2)
+
+# Create fig1 - Budget Distribution
+fig1 = go.Figure(data=[go.Pie(
+    labels=['Total Income', 'Total Expenses', 'Savings Allocation', 'Remaining'],
+    values=[total_income, total_expenses, total_savings_allocation, max(0, remaining_after_savings)],
+    hole=.3,
+    marker=dict(colors=['#43c0d1', '#a64957', '#7cb342', '#fdd835'])
+)])
+fig1.update_layout(title="Budget Distribution", showlegend=True)
+
+with col1:
+    st.markdown("##### Income vs Expenses vs Savings")
+    st.plotly_chart(fig1, use_container_width=True)
+
+# Create fig2 - Expense Breakdown
+expense_categories = []
+expense_amounts = []
+
+if home > 0:
+    expense_categories.append("House Payment")
+    expense_amounts.append(home)
+if home_insurance > 0:
+    expense_categories.append("Home Insurance")
+    expense_amounts.append(home_insurance)
+if car_payment > 0:
+    expense_categories.append("Car Payment")
+    expense_amounts.append(car_payment)
+if car_insurance > 0:
+    expense_categories.append("Car Insurance")
+    expense_amounts.append(car_insurance)
+if phone_bill > 0:
+    expense_categories.append("Phone Bill")
+    expense_amounts.append(phone_bill)
+if internet > 0:
+    expense_categories.append("Internet")
+    expense_amounts.append(internet)
+if electricity > 0:
+    expense_categories.append("Electricity")
+    expense_amounts.append(electricity)
+if water > 0:
+    expense_categories.append("Water")
+    expense_amounts.append(water)
+
+for item in st.session_state.additional_expenses:
+    expense_categories.append(item['Expense'])
+    expense_amounts.append(item['Amount'])
+
+fig2 = go.Figure(data=[go.Pie(
+    labels=expense_categories,
+    values=expense_amounts,
+    marker=dict(colors=['#e57373', '#f06292', '#ba68c8', '#9575cd', '#7986cb', '#64b5f6', '#4fc3f7', '#4dd0e1', '#4db6ac'])
+)])
+fig2.update_layout(title="Where Your Money Goes", showlegend=True)
+
+with col2:
+    st.markdown("##### Expense Breakdown")
+    st.plotly_chart(fig2, use_container_width=True)
+
+# Create fig3 - Savings Goals Progress
+fig3 = None
+if "savings_goals" in st.session_state and st.session_state.savings_goals:
+    st.markdown("##### Savings Goals Progress")
+    fig3 = go.Figure()
+    
+    for goal in st.session_state.savings_goals:
+        fig3.add_trace(go.Bar(
+            name=goal['Goal'],
+            x=[goal['Goal']],
+            y=[goal['Monthly']],
+            text=[f"${goal['Monthly']:,.2f}/mo<br>{goal['Months']:.1f} months to ${goal['Target']:,.2f}"],
+            textposition='auto',
+        ))
+    
+    fig3.update_layout(
+        title="Monthly Savings Contributions",
+        yaxis_title="Monthly Amount ($)",
+        showlegend=False,
+        height=400
+    )
+    st.plotly_chart(fig3, use_container_width=True)
 
 # 📥 Downloadable & Visual Budget Spreadsheet
 st.subheader("⬇️ Download Your Budget Spreadsheet")
@@ -241,7 +351,7 @@ summary_rows = [
 ]
 
 savings_rows = []
-if st.session_state.savings_goals:
+if "savings_goals" in st.session_state and st.session_state.savings_goals:
     for goal in st.session_state.savings_goals:
         savings_rows.append({
             "Section": "Savings Goals",
@@ -281,17 +391,19 @@ st.dataframe(
     use_container_width=True
 )
 
-# Download as Excel with formatting
-def to_excel(df):
+# Download as Excel with formatting and charts
+def to_excel(df, chart_fig1, chart_fig2, chart_fig3=None):
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output, {'in_memory': True})
     worksheet = workbook.add_worksheet("Budget")
+    charts_worksheet = workbook.add_worksheet("Visualizations")
 
     # Define formats
     formats = {
         "Income": workbook.add_format({'bg_color': '#e0f7fa', 'num_format': '$#,##0.00'}),
         "Expenses": workbook.add_format({'bg_color': '#ffebee', 'num_format': '$#,##0.00'}),
         "Savings": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
+        "Savings Goals": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
         "Summary": workbook.add_format({'bg_color': '#fffde7', 'num_format': '$#,##0.00'}),
         "Header": workbook.add_format({'bold': True, 'bg_color': '#bdbdbd', 'border': 1}),
         "Default": workbook.add_format({'num_format': '$#,##0.00'})
@@ -313,16 +425,39 @@ def to_excel(df):
     worksheet.set_column(0, 0, 12)
     worksheet.set_column(1, 1, 35)
     worksheet.set_column(2, 2, 18)
+    
+    # Add charts to the visualizations sheet
+    # Save plotly charts as images and insert them
+    try:
+        # Save fig1 (Budget Distribution)
+        img1_bytes = chart_fig1.to_image(format="png", width=800, height=600)
+        img1_stream = io.BytesIO(img1_bytes)
+        charts_worksheet.insert_image('A2', 'budget_distribution.png', {'image_data': img1_stream})
+        
+        # Save fig2 (Expense Breakdown)
+        img2_bytes = chart_fig2.to_image(format="png", width=800, height=600)
+        img2_stream = io.BytesIO(img2_bytes)
+        charts_worksheet.insert_image('A35', 'expense_breakdown.png', {'image_data': img2_stream})
+        
+        # Save fig3 (Savings Goals) if it exists
+        if chart_fig3 is not None:
+            img3_bytes = chart_fig3.to_image(format="png", width=800, height=600)
+            img3_stream = io.BytesIO(img3_bytes)
+            charts_worksheet.insert_image('A68', 'savings_goals.png', {'image_data': img3_stream})
+    except Exception as e:
+        # If image export fails, just skip it
+        charts_worksheet.write('A2', 'Note: Chart visualization requires kaleido package. Install with: pip install kaleido')
+        pass
 
     workbook.close()
     output.seek(0)
     return output
 
-excel_data = to_excel(export_df)
+excel_data = to_excel(export_df, fig1, fig2, fig3)
 
 st.download_button(
-    label="Download Fancy Budget as Excel",
+    label="Download Budget with Visualizations as Excel",
     data=excel_data,
-    file_name="budget_summary.xlsx",
+    file_name="budget_summary_with_charts.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
