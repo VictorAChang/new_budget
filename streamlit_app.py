@@ -6,33 +6,47 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from PIL import Image
 
-st.set_page_config(page_title="Chang Budget", layout="centered")
+st.set_page_config(page_title="Budget Tool", layout="centered")
 
-# Custom theme with Microsoft colors
+# Custom theme with Michigan colors
 st.markdown("""
     <style>
     .stApp {
-        background: linear-gradient(135deg, #0078D4 0%, #50E6FF 100%);
+        background: #F7F7F7;
     }
     .main .block-container {
-        background-color: rgba(255, 255, 255, 0.95);
+        background-color: #FFFFFF;
         padding: 2rem;
         border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+        border-top: 6px solid #FFCB05;
     }
-    h1, h2, h3, h4, h5, h6 {
-        color: #0078D4 !important;
+    h1 {
+        color: #00274C !important;
     }
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-        color: #0078D4 !important;
+    h2, h3, h4, h5, h6 {
+        color: #FFCB05 !important;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+    }
+    .stMarkdown h1 {
+        color: #00274C !important;
+    }
+    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+        color: #FFCB05 !important;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
     }
     div[data-testid="stMarkdownContainer"] h1,
+    div[data-testid="stMarkdownContainer"] h2,
+    div[data-testid="stMarkdownContainer"] h1 {
+        color: #00274C !important;
+    }
     div[data-testid="stMarkdownContainer"] h2,
     div[data-testid="stMarkdownContainer"] h3,
     div[data-testid="stMarkdownContainer"] h4,
     div[data-testid="stMarkdownContainer"] h5,
     div[data-testid="stMarkdownContainer"] h6 {
-        color: #0078D4 !important;
+        color: #FFCB05 !important;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
     }
     .stMarkdown p, .stMarkdown strong, .stMarkdown em {
         color: #323130 !important;
@@ -43,180 +57,184 @@ st.markdown("""
         color: #323130 !important;
     }
     .stButton button {
-        background-color: #0078D4 !important;
-        color: white !important;
+        background-color: #FFCB05 !important;
+        color: #00274C !important;
         border: none !important;
         border-radius: 4px !important;
         padding: 0.5rem 1rem !important;
         font-weight: 600 !important;
     }
     .stButton button:hover {
-        background-color: #106EBE !important;
+        background-color: #F5C400 !important;
     }
     .stDownloadButton button {
-        background-color: #0078D4 !important;
-        color: white !important;
+        background-color: #00274C !important;
+        color: #FFCB05 !important;
         border: none !important;
         border-radius: 4px !important;
         padding: 0.5rem 1rem !important;
         font-weight: 600 !important;
     }
+    .stDownloadButton button span,
+    .stDownloadButton button p {
+        color: #FFCB05 !important;
+    }
     .stDownloadButton button:hover {
-        background-color: #106EBE !important;
+        background-color: #0A3A6B !important;
+    }
+    div[data-testid="stMetric"] {
+        border-left: 4px solid #FFCB05;
+        padding-left: 0.75rem;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # 🚀 Header
-st.title("🧑‍🚀 Chang Family Budgetary Tool")
-st.caption("Track your budget, launch your goals, and orbit financial freedom.")
+header_col1, header_col2 = st.columns([1, 6])
+with header_col1:
+    st.image(
+        "https://cdn.worldvectorlogo.com/logos/university-of-michigan-3.svg",
+        width=72
+    )
+with header_col2:
+    st.markdown("<h1>Budgetary Tool</h1>", unsafe_allow_html=True)
+    st.caption("Track your budget, launch your goals, and orbit financial freedom.")
 
-# 📥 Income & Fixed Expenses
-st.subheader("💰 Monthly Income")
-
-# Base income and expenses
-# income
-gross_income = st.number_input("Main job (gross)", value=5417.00, format="%.2f")
-
-st.markdown("#### 🧾 Payroll Taxes & Contributions")
-state_flat_tax_percent = st.number_input(
-    "State flat tax (%)",
-    min_value=0.0,
-    max_value=20.0,
-    value=4.05,
-    format="%.2f"
-)
-fsa_monthly = st.number_input("FSA monthly contribution", min_value=0.0, format="%.2f")
-retirement_percent = st.number_input(
-    "Retirement contribution (%)",
-    min_value=0.0,
-    max_value=100.0,
-    format="%.2f"
+tab_income, tab_expenses, tab_savings, tab_report = st.tabs(
+    ["Income", "Expenses", "Savings Goals", "Visuals & Export"]
 )
 
-retirement_monthly = gross_income * (retirement_percent / 100.0)
+with tab_income:
+    st.subheader("💰 Monthly Income")
 
-state_tax_rate = state_flat_tax_percent / 100.0
-state_taxable_income = max(0.0, gross_income - fsa_monthly - retirement_monthly)
-state_income_tax = state_taxable_income * state_tax_rate
+    gross_income = st.number_input("Main job (gross)", value=5417.00, format="%.2f")
 
-ss_wage_base_annual = 168600.0
-ss_wage_base_monthly = ss_wage_base_annual / 12.0
-fica_taxable_income = max(0.0, gross_income - fsa_monthly)
-social_security_tax = min(fica_taxable_income, ss_wage_base_monthly) * 0.062
-medicare_tax = fica_taxable_income * 0.0145
+    st.markdown("#### 🧾 Payroll Taxes & Contributions")
+    state_flat_tax_percent = st.number_input(
+        "State flat tax (%)",
+        min_value=0.0,
+        max_value=20.0,
+        value=4.05,
+        format="%.2f"
+    )
+    fsa_monthly = st.number_input("FSA monthly contribution", min_value=0.0, format="%.2f")
+    retirement_percent = st.number_input(
+        "Retirement contribution (%)",
+        min_value=0.0,
+        max_value=100.0,
+        format="%.2f"
+    )
 
-total_payroll_taxes = social_security_tax + medicare_tax + state_income_tax
-total_payroll_deductions = total_payroll_taxes + fsa_monthly + retirement_monthly
-net_main_income = gross_income - total_payroll_deductions
+    retirement_monthly = gross_income * (retirement_percent / 100.0)
 
+    state_tax_rate = state_flat_tax_percent / 100.0
+    state_taxable_income = max(0.0, gross_income - fsa_monthly - retirement_monthly)
+    state_income_tax = state_taxable_income * state_tax_rate
 
-st.markdown(
-    "**Estimated payroll taxes (simplified):** "
-    f"${total_payroll_taxes:,.2f}"
-)
-st.markdown(
-    f"State income tax: ${state_income_tax:,.2f}"
-)
-st.markdown(
-    f"Social Security: ${social_security_tax:,.2f}"
-)
-st.markdown(
-    f"Medicare: ${medicare_tax:,.2f}"
-)
-st.markdown(
-    "**Estimated net from main job:** "
-    f"${net_main_income:,.2f}"
-)
-st.caption(
-    "Estimates use a flat state tax and standard FICA. "
-    "FSA reduces FICA and state taxable income; retirement reduces state taxable income."
-)
+    ss_wage_base_annual = 168600.0
+    ss_wage_base_monthly = ss_wage_base_annual / 12.0
+    fica_taxable_income = max(0.0, gross_income - fsa_monthly)
+    social_security_tax = min(fica_taxable_income, ss_wage_base_monthly) * 0.062
+    medicare_tax = fica_taxable_income * 0.0145
 
-va_income = st.number_input("VA Benefits", value=4158.17, format="%.2f")
+    total_payroll_taxes = social_security_tax + medicare_tax + state_income_tax
+    total_payroll_deductions = total_payroll_taxes + fsa_monthly + retirement_monthly
+    net_main_income = gross_income - total_payroll_deductions
 
-# 📥 Income & Fixed Expenses
-st.subheader("💰 Monthly Expenses")
-#expenses
-home = st.number_input("House Payment", value=1469.61, format="%.2f")
-car_payment = st.number_input("Car Payment", value=472.84, format="%.2f")
-car_insurance = st.number_input("Car Insurance", value=120.00, format="%.2f")
-phone_bill = st.number_input("Phone Bill", value=140.00, format="%.2f")
-internet = st.number_input("Internet Bill", value=50.00, format="%.2f")
-electricity = st.number_input("Electricity Bill", value=18.00, format="%.2f")
-water = st.number_input("Water Bill", value=50.00, format="%.2f")
-spotify = st.number_input("Spotify Subscription", value=18.18, format="%.2f")
-adobe = st.number_input("Adobe Subscription", value=21.39, format="%.2f")
-digital_ocean = st.number_input("Digital Ocean Subscription", value=8.00, format="%.2f")
-health = st.number_input("Health Insurance", value=100.00, format="%.2f")
-dental = st.number_input("Dental Insurance", value=49.81, format="%.2f")
-vision = st.number_input("Vision Insurance", value=15.43, format="%.2f")
+    st.markdown(
+        "**Estimated payroll taxes (simplified):** "
+        f"${total_payroll_taxes:,.2f}"
+    )
+    st.markdown(f"State income tax: ${state_income_tax:,.2f}")
+    st.markdown(f"Social Security: ${social_security_tax:,.2f}")
+    st.markdown(f"Medicare: ${medicare_tax:,.2f}")
+    st.markdown(
+        "**Estimated net from main job:** "
+        f"${net_main_income:,.2f}"
+    )
+    st.caption(
+        "Estimates use a flat state tax and standard FICA. "
+        "FSA reduces FICA and state taxable income; retirement reduces state taxable income."
+    )
 
+    va_income = st.number_input("VA Benefits", value=4158.17, format="%.2f")
 
+    st.markdown("#### ➕ Add Additional Income Sources")
+    if "additional_income" not in st.session_state:
+        st.session_state.additional_income = []
 
-# Additional income
-st.markdown("#### ➕ Add Additional Income Sources")
-if "additional_income" not in st.session_state:
-    st.session_state.additional_income = []
+    with st.form("add_income_form"):
+        add_income_name = st.text_input("Income Source Name")
+        add_income_amount = st.number_input("Amount", min_value=0.0, format="%.2f", key="income_amount")
+        add_income_submit = st.form_submit_button("Add Income")
+        if add_income_submit and add_income_name and add_income_amount > 0:
+            st.session_state.additional_income.append({
+                "Source": add_income_name,
+                "Amount": add_income_amount
+            })
+            st.rerun()
 
-with st.form("add_income_form"):
-    add_income_name = st.text_input("Income Source Name")
-    add_income_amount = st.number_input("Amount", min_value=0.0, format="%.2f", key="income_amount")
-    add_income_submit = st.form_submit_button("Add Income")
-    if add_income_submit and add_income_name and add_income_amount > 0:
-        st.session_state.additional_income.append({
-            "Source": add_income_name,
-            "Amount": add_income_amount
-        })
-        st.rerun()
+    if st.session_state.additional_income:
+        for i, income_item in enumerate(st.session_state.additional_income):
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.markdown(f"**{income_item['Source']}**")
+            with col2:
+                st.markdown(f"${income_item['Amount']:,.2f}")
+            with col3:
+                if st.button("🗑️", key=f"delete_income_{i}"):
+                    st.session_state.additional_income.pop(i)
+                    st.rerun()
+        total_additional_income = sum(item["Amount"] for item in st.session_state.additional_income)
+    else:
+        total_additional_income = 0
 
-if st.session_state.additional_income:
-    for i, income_item in enumerate(st.session_state.additional_income):
-        col1, col2, col3 = st.columns([3, 2, 1])
-        with col1:
-            st.markdown(f"**{income_item['Source']}**")
-        with col2:
-            st.markdown(f"${income_item['Amount']:,.2f}")
-        with col3:
-            if st.button("🗑️", key=f"delete_income_{i}"):
-                st.session_state.additional_income.pop(i)
-                st.rerun()
-    total_additional_income = sum(item["Amount"] for item in st.session_state.additional_income)
-else:
-    total_additional_income = 0
+with tab_expenses:
+    st.subheader("💰 Monthly Expenses")
+    home = st.number_input("House Payment", value=1469.61, format="%.2f")
+    car_payment = st.number_input("Car Payment", value=472.84, format="%.2f")
+    car_insurance = st.number_input("Car Insurance", value=120.00, format="%.2f")
+    phone_bill = st.number_input("Phone Bill", value=140.00, format="%.2f")
+    internet = st.number_input("Internet Bill", value=50.00, format="%.2f")
+    electricity = st.number_input("Electricity Bill", value=18.00, format="%.2f")
+    water = st.number_input("Water Bill", value=50.00, format="%.2f")
+    spotify = st.number_input("Spotify Subscription", value=18.18, format="%.2f")
+    adobe = st.number_input("Adobe Subscription", value=21.39, format="%.2f")
+    digital_ocean = st.number_input("Digital Ocean Subscription", value=8.00, format="%.2f")
+    health = st.number_input("Health Insurance", value=100.00, format="%.2f")
+    dental = st.number_input("Dental Insurance", value=49.81, format="%.2f")
+    vision = st.number_input("Vision Insurance", value=15.43, format="%.2f")
 
-# Additional fixed expenses
-st.markdown("#### ➕ Add Additional Fixed Expenses")
-if "additional_expenses" not in st.session_state:
-    st.session_state.additional_expenses = []
+    st.markdown("#### ➕ Add Additional Fixed Expenses")
+    if "additional_expenses" not in st.session_state:
+        st.session_state.additional_expenses = []
 
-with st.form("add_expense_form"):
-    add_expense_name = st.text_input("Expense Name")
-    add_expense_amount = st.number_input("Amount", min_value=0.0, format="%.2f", key="expense_amount")
-    add_expense_submit = st.form_submit_button("Add Expense")
-    if add_expense_submit and add_expense_name and add_expense_amount > 0:
-        st.session_state.additional_expenses.append({
-            "Expense": add_expense_name,
-            "Amount": add_expense_amount
-        })
-        st.rerun()
+    with st.form("add_expense_form"):
+        add_expense_name = st.text_input("Expense Name")
+        add_expense_amount = st.number_input("Amount", min_value=0.0, format="%.2f", key="expense_amount")
+        add_expense_submit = st.form_submit_button("Add Expense")
+        if add_expense_submit and add_expense_name and add_expense_amount > 0:
+            st.session_state.additional_expenses.append({
+                "Expense": add_expense_name,
+                "Amount": add_expense_amount
+            })
+            st.rerun()
 
-if st.session_state.additional_expenses:
-    for i, expense in enumerate(st.session_state.additional_expenses):
-        col1, col2, col3 = st.columns([3, 2, 1])
-        with col1:
-            st.markdown(f"**{expense['Expense']}**")
-        with col2:
-            st.markdown(f"${expense['Amount']:,.2f}")
-        with col3:
-            if st.button("🗑️", key=f"delete_expense_{i}"):
-                st.session_state.additional_expenses.pop(i)
-                st.rerun()
-    total_additional_expenses = sum(item["Amount"] for item in st.session_state.additional_expenses)
-else:
-    total_additional_expenses = 0
+    if st.session_state.additional_expenses:
+        for i, expense in enumerate(st.session_state.additional_expenses):
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.markdown(f"**{expense['Expense']}**")
+            with col2:
+                st.markdown(f"${expense['Amount']:,.2f}")
+            with col3:
+                if st.button("🗑️", key=f"delete_expense_{i}"):
+                    st.session_state.additional_expenses.pop(i)
+                    st.rerun()
+        total_additional_expenses = sum(item["Amount"] for item in st.session_state.additional_expenses)
+    else:
+        total_additional_expenses = 0
 
-# Calculate totals
 total_income = gross_income + va_income + total_additional_income
 total_expenses = (
     home
@@ -239,396 +257,399 @@ total_expenses = (
 )
 surplus = total_income - total_expenses
 
-st.markdown(f"**💵 Total Income:** ${total_income:,.2f}")
-st.markdown(f"**🧾 Total Expenses:** ${total_expenses:,.2f}")
-st.markdown(f"**📈 Monthly Surplus:** ${surplus:,.2f}")
+with tab_income:
+    st.markdown("#### Summary")
+    st.metric("Total Income", f"${total_income:,.2f}")
+    st.metric("Net Main Job Income", f"${net_main_income:,.2f}")
 
-# 🎯 Savings Goals
-st.subheader("🎯 Savings Goals")
-st.markdown("#### ➕ Create Savings Goals")
+with tab_expenses:
+    st.markdown("#### Summary")
+    st.metric("Total Expenses", f"${total_expenses:,.2f}")
 
-if "savings_goals" not in st.session_state:
-    st.session_state.savings_goals = []
+with tab_savings:
+    st.subheader("🎯 Savings Goals")
+    st.markdown("#### ➕ Create Savings Goals")
 
-with st.form("add_savings_goal_form"):
-    goal_name = st.text_input("Goal Name (e.g., Emergency Fund, Vacation)")
-    goal_target = st.number_input("Target Amount ($)", min_value=0.0, format="%.2f", key="goal_target")
-    goal_monthly = st.number_input("Monthly Contribution ($)", min_value=0.0, format="%.2f", key="goal_monthly")
-    add_goal_submit = st.form_submit_button("Add Savings Goal")
-    if add_goal_submit and goal_name and goal_target > 0 and goal_monthly > 0:
-        months_to_goal = goal_target / goal_monthly if goal_monthly > 0 else 0
-        st.session_state.savings_goals.append({
-            "Goal": goal_name,
-            "Target": goal_target,
-            "Monthly": goal_monthly,
-            "Months": months_to_goal
-        })
-        st.rerun()
+    total_savings_allocation = 0
+    remaining_surplus = surplus
 
-if st.session_state.savings_goals:
-    st.markdown("#### 📊 Your Savings Goals")
-    
-    # Allow modification of monthly contributions
-    for i, goal in enumerate(st.session_state.savings_goals):
-        col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
-        with col1:
-            st.markdown(f"**{goal['Goal']}**")
-        with col2:
-            st.markdown(f"Target: ${goal['Target']:,.2f}")
-        with col3:
-            new_monthly = st.number_input(
-                f"Monthly", 
-                min_value=0.0, 
-                value=float(goal['Monthly']),
-                format="%.2f",
-                key=f"modify_goal_{i}"
+    if "savings_goals" not in st.session_state:
+        st.session_state.savings_goals = []
+
+    with st.form("add_savings_goal_form"):
+        goal_name = st.text_input("Goal Name (e.g., Emergency Fund, Vacation)")
+        goal_target = st.number_input("Target Amount ($)", min_value=0.0, format="%.2f", key="goal_target")
+        goal_monthly = st.number_input("Monthly Contribution ($)", min_value=0.0, format="%.2f", key="goal_monthly")
+        add_goal_submit = st.form_submit_button("Add Savings Goal")
+        if add_goal_submit and goal_name and goal_target > 0 and goal_monthly > 0:
+            months_to_goal = goal_target / goal_monthly if goal_monthly > 0 else 0
+            st.session_state.savings_goals.append({
+                "Goal": goal_name,
+                "Target": goal_target,
+                "Monthly": goal_monthly,
+                "Months": months_to_goal
+            })
+            st.rerun()
+
+    if st.session_state.savings_goals:
+        st.markdown("#### 📊 Your Savings Goals")
+
+        for i, goal in enumerate(st.session_state.savings_goals):
+            col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
+            with col1:
+                st.markdown(f"**{goal['Goal']}**")
+            with col2:
+                st.markdown(f"Target: ${goal['Target']:,.2f}")
+            with col3:
+                new_monthly = st.number_input(
+                    "Monthly",
+                    min_value=0.0,
+                    value=float(goal['Monthly']),
+                    format="%.2f",
+                    key=f"modify_goal_{i}"
+                )
+                if new_monthly != goal['Monthly']:
+                    st.session_state.savings_goals[i]['Monthly'] = new_monthly
+                    st.session_state.savings_goals[i]['Months'] = (
+                        goal['Target'] / new_monthly if new_monthly > 0 else 0
+                    )
+            with col4:
+                months = goal['Target'] / goal['Monthly'] if goal['Monthly'] > 0 else 0
+                years = months / 12
+                if years >= 1:
+                    st.markdown(f"⏱️ {years:.1f} years ({months:.1f} months)")
+                else:
+                    st.markdown(f"⏱️ {months:.1f} months")
+            with col5:
+                if st.button("🗑️", key=f"delete_goal_{i}"):
+                    st.session_state.savings_goals.pop(i)
+                    st.rerun()
+
+        total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
+        remaining_surplus = surplus - total_savings_allocation
+
+        st.markdown("---")
+        st.markdown(f"**💰 Total Monthly Savings Allocation:** ${total_savings_allocation:,.2f}")
+        st.markdown(f"**📈 Remaining Surplus After Savings:** ${remaining_surplus:,.2f}")
+
+        if remaining_surplus < 0:
+            st.warning(
+                "⚠️ Warning: Your savings goals exceed your surplus by "
+                f"${abs(remaining_surplus):,.2f}"
             )
-            if new_monthly != goal['Monthly']:
-                st.session_state.savings_goals[i]['Monthly'] = new_monthly
-                st.session_state.savings_goals[i]['Months'] = goal['Target'] / new_monthly if new_monthly > 0 else 0
-        with col4:
-            months = goal['Target'] / goal['Monthly'] if goal['Monthly'] > 0 else 0
-            years = months / 12
-            if years >= 1:
-                st.markdown(f"⏱️ {years:.1f} years ({months:.1f} months)")
-            else:
-                st.markdown(f"⏱️ {months:.1f} months")
-        with col5:
-            if st.button("🗑️", key=f"delete_goal_{i}"):
-                st.session_state.savings_goals.pop(i)
-                st.rerun()
-    
-    # Calculate total monthly savings allocation
-    total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
-    remaining_surplus = surplus - total_savings_allocation
-    
-    st.markdown("---")
-    st.markdown(f"**💰 Total Monthly Savings Allocation:** ${total_savings_allocation:,.2f}")
-    st.markdown(f"**📈 Remaining Surplus After Savings:** ${remaining_surplus:,.2f}")
-    
-    if remaining_surplus < 0:
-        st.warning(f"⚠️ Warning: Your savings goals exceed your surplus by ${abs(remaining_surplus):,.2f}")
-else:
-    st.info("No savings goals yet. Create one above to track your progress!")
+    else:
+        st.info("No savings goals yet. Create one above to track your progress!")
 
-# 📊 Visualizations
-st.subheader("📊 Budget Visualizations")
+    st.markdown("#### Summary")
+    st.metric("Total Monthly Savings", f"${total_savings_allocation:,.2f}")
+    st.metric("Remaining Surplus", f"${remaining_surplus:,.2f}")
 
-# Calculate savings allocation
-total_savings_allocation = 0
-if "savings_goals" in st.session_state and st.session_state.savings_goals:
-    total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
+with tab_report:
+    st.markdown(f"**💵 Total Income:** ${total_income:,.2f}")
+    st.markdown(f"**🧾 Total Expenses:** ${total_expenses:,.2f}")
+    st.markdown(f"**📈 Monthly Surplus:** ${surplus:,.2f}")
 
-remaining_after_savings = surplus - total_savings_allocation
+    st.subheader("📊 Budget Visualizations")
 
-col1, col2 = st.columns(2)
+    total_savings_allocation = 0
+    if "savings_goals" in st.session_state and st.session_state.savings_goals:
+        total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
 
-# Create fig1 - Budget Distribution
-fig1, ax1 = plt.subplots(figsize=(9, 7))
-colors1 = ['#0078D4', '#a64957', '#7cb342', '#fdd835']
-labels1 = ['Total Income', 'Total Expenses', 'Savings Allocation', 'Remaining']
-values1 = [total_income, total_expenses, total_savings_allocation, max(0, remaining_after_savings)]
-explode1 = (0.05, 0.05, 0.05, 0.05)
-wedges, texts, autotexts = ax1.pie(
-    values1, 
-    labels=labels1, 
-    colors=colors1, 
-    autopct=lambda pct: f'${pct * sum(values1) / 100:,.0f}\n({pct:.1f}%)',
-    startangle=90,
-    explode=explode1,
-    shadow=True,
-    textprops={'fontsize': 10, 'weight': 'bold'}
-)
-ax1.set_title("Budget Distribution", fontsize=16, fontweight='bold', pad=20)
-for autotext in autotexts:
-    autotext.set_color('white')
-    autotext.set_fontweight('bold')
+    remaining_after_savings = surplus - total_savings_allocation
 
-with col1:
-    st.markdown("##### Income vs Expenses vs Savings")
-    st.pyplot(fig1)
+    col1, col2 = st.columns(2)
 
-# Create fig2 - Expense Breakdown (Top 5 + Other)
-expense_categories = []
-expense_amounts = []
+    fig1, ax1 = plt.subplots(figsize=(9, 7))
+    colors1 = ['#0078D4', '#a64957', '#7cb342', '#fdd835']
+    labels1 = ['Total Income', 'Total Expenses', 'Savings Allocation', 'Remaining']
+    values1 = [total_income, total_expenses, total_savings_allocation, max(0, remaining_after_savings)]
+    explode1 = (0.05, 0.05, 0.05, 0.05)
+    wedges, texts, autotexts = ax1.pie(
+        values1,
+        labels=labels1,
+        colors=colors1,
+        autopct=lambda pct: f'${pct * sum(values1) / 100:,.0f}\n({pct:.1f}%)',
+        startangle=90,
+        explode=explode1,
+        shadow=True,
+        textprops={'fontsize': 10, 'weight': 'bold'}
+    )
+    ax1.set_title("Budget Distribution", fontsize=16, fontweight='bold', pad=20)
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_fontweight('bold')
 
-if home > 0:
-    expense_categories.append("House Payment")
-    expense_amounts.append(home)
-if car_payment > 0:
-    expense_categories.append("Car Payment")
-    expense_amounts.append(car_payment)
-if car_insurance > 0:
-    expense_categories.append("Car Insurance")
-    expense_amounts.append(car_insurance)
-if phone_bill > 0:
-    expense_categories.append("Phone Bill")
-    expense_amounts.append(phone_bill)
-if internet > 0:
-    expense_categories.append("Internet")
-    expense_amounts.append(internet)
-if electricity > 0:
-    expense_categories.append("Electricity")
-    expense_amounts.append(electricity)
-if water > 0:
-    expense_categories.append("Water")
-    expense_amounts.append(water)
-if spotify > 0:
-    expense_categories.append("Spotify Subscription")
-    expense_amounts.append(spotify)
-if adobe > 0:
-    expense_categories.append("Adobe Subscription")
-    expense_amounts.append(adobe)
-if digital_ocean > 0:
-    expense_categories.append("Digital Ocean Subscription")
-    expense_amounts.append(digital_ocean)
-if health > 0:
-    expense_categories.append("Health Insurance")
-    expense_amounts.append(health)
-if dental > 0:
-    expense_categories.append("Dental Insurance")
-    expense_amounts.append(dental)
-if vision > 0:
-    expense_categories.append("Vision Insurance")
-    expense_amounts.append(vision)
-if total_payroll_taxes > 0:
-    expense_categories.append("Payroll Taxes (Est.)")
-    expense_amounts.append(total_payroll_taxes)
-if fsa_monthly > 0:
-    expense_categories.append("FSA Contribution")
-    expense_amounts.append(fsa_monthly)
-if retirement_monthly > 0:
-    expense_categories.append("Retirement Contribution")
-    expense_amounts.append(retirement_monthly)
+    with col1:
+        st.markdown("##### Income vs Expenses vs Savings")
+        st.pyplot(fig1)
 
-for item in st.session_state.additional_expenses:
-    expense_categories.append(item['Expense'])
-    expense_amounts.append(item['Amount'])
+    expense_categories = []
+    expense_amounts = []
 
-# Sort expenses and keep top 5, group rest as "Other"
-expense_data = list(zip(expense_categories, expense_amounts))
-expense_data.sort(key=lambda x: x[1], reverse=True)
+    if home > 0:
+        expense_categories.append("House Payment")
+        expense_amounts.append(home)
+    if car_payment > 0:
+        expense_categories.append("Car Payment")
+        expense_amounts.append(car_payment)
+    if car_insurance > 0:
+        expense_categories.append("Car Insurance")
+        expense_amounts.append(car_insurance)
+    if phone_bill > 0:
+        expense_categories.append("Phone Bill")
+        expense_amounts.append(phone_bill)
+    if internet > 0:
+        expense_categories.append("Internet")
+        expense_amounts.append(internet)
+    if electricity > 0:
+        expense_categories.append("Electricity")
+        expense_amounts.append(electricity)
+    if water > 0:
+        expense_categories.append("Water")
+        expense_amounts.append(water)
+    if spotify > 0:
+        expense_categories.append("Spotify Subscription")
+        expense_amounts.append(spotify)
+    if adobe > 0:
+        expense_categories.append("Adobe Subscription")
+        expense_amounts.append(adobe)
+    if digital_ocean > 0:
+        expense_categories.append("Digital Ocean Subscription")
+        expense_amounts.append(digital_ocean)
+    if health > 0:
+        expense_categories.append("Health Insurance")
+        expense_amounts.append(health)
+    if dental > 0:
+        expense_categories.append("Dental Insurance")
+        expense_amounts.append(dental)
+    if vision > 0:
+        expense_categories.append("Vision Insurance")
+        expense_amounts.append(vision)
+    if total_payroll_taxes > 0:
+        expense_categories.append("Payroll Taxes (Est.)")
+        expense_amounts.append(total_payroll_taxes)
+    if fsa_monthly > 0:
+        expense_categories.append("FSA Contribution")
+        expense_amounts.append(fsa_monthly)
+    if retirement_monthly > 0:
+        expense_categories.append("Retirement Contribution")
+        expense_amounts.append(retirement_monthly)
 
-if len(expense_data) > 5:
-    top_5 = expense_data[:5]
-    other_amount = sum(amt for _, amt in expense_data[5:])
-    final_categories = [cat for cat, _ in top_5] + ['Other Expenses']
-    final_amounts = [amt for _, amt in top_5] + [other_amount]
-else:
-    final_categories = [cat for cat, _ in expense_data]
-    final_amounts = [amt for _, amt in expense_data]
+    for item in st.session_state.additional_expenses:
+        expense_categories.append(item['Expense'])
+        expense_amounts.append(item['Amount'])
 
-fig2, ax2 = plt.subplots(figsize=(9, 7))
-colors2 = ['#0078D4', '#50E6FF', '#7cb342', '#fdd835', '#f06292', '#b0b0b0']
-explode2 = [0.05] * len(final_amounts)
+    expense_data = list(zip(expense_categories, expense_amounts))
+    expense_data.sort(key=lambda x: x[1], reverse=True)
 
-wedges2, texts2, autotexts2 = ax2.pie(
-    final_amounts, 
-    labels=final_categories, 
-    colors=colors2[:len(final_categories)], 
-    autopct=lambda pct: f'${pct * sum(final_amounts) / 100:,.0f}\n({pct:.1f}%)',
-    startangle=90,
-    explode=explode2,
-    shadow=True,
-    textprops={'fontsize': 10, 'weight': 'bold'}
-)
-ax2.set_title("Where Your Money Goes (Top 5)", fontsize=16, fontweight='bold', pad=20)
+    if len(expense_data) > 5:
+        top_5 = expense_data[:5]
+        other_amount = sum(amt for _, amt in expense_data[5:])
+        final_categories = [cat for cat, _ in top_5] + ['Other Expenses']
+        final_amounts = [amt for _, amt in top_5] + [other_amount]
+    else:
+        final_categories = [cat for cat, _ in expense_data]
+        final_amounts = [amt for _, amt in expense_data]
 
-for autotext in autotexts2:
-    autotext.set_color('white')
-    autotext.set_fontweight('bold')
+    fig2, ax2 = plt.subplots(figsize=(9, 7))
+    colors2 = ['#0078D4', '#50E6FF', '#7cb342', '#fdd835', '#f06292', '#b0b0b0']
+    explode2 = [0.05] * len(final_amounts)
 
-with col2:
-    st.markdown("##### Expense Breakdown")
-    st.pyplot(fig2)
+    wedges2, texts2, autotexts2 = ax2.pie(
+        final_amounts,
+        labels=final_categories,
+        colors=colors2[:len(final_categories)],
+        autopct=lambda pct: f'${pct * sum(final_amounts) / 100:,.0f}\n({pct:.1f}%)',
+        startangle=90,
+        explode=explode2,
+        shadow=True,
+        textprops={'fontsize': 10, 'weight': 'bold'}
+    )
+    ax2.set_title("Where Your Money Goes (Top 5)", fontsize=16, fontweight='bold', pad=20)
 
-# Create fig3 - Savings Goals Progress
-fig3 = None
-if "savings_goals" in st.session_state and st.session_state.savings_goals:
-    st.markdown("##### Savings Goals Progress")
-    fig3, ax3 = plt.subplots(figsize=(10, 6))
-    
-    goal_names = [goal['Goal'] for goal in st.session_state.savings_goals]
-    goal_amounts = [goal['Monthly'] for goal in st.session_state.savings_goals]
-    
-    colors3 = ['#0078D4', '#50E6FF', '#7cb342', '#fdd835', '#f06292']
-    bars = ax3.bar(goal_names, goal_amounts, color=colors3[:len(goal_names)], edgecolor='black', linewidth=1.5)
-    ax3.set_ylabel('Monthly Amount ($)', fontsize=13, fontweight='bold')
-    ax3.set_title('Monthly Savings Contributions', fontsize=16, fontweight='bold', pad=20)
-    ax3.tick_params(axis='x', rotation=45, labelsize=10)
-    ax3.grid(axis='y', alpha=0.3, linestyle='--')
-    ax3.set_axisbelow(True)
-    
-    # Add value labels on bars
-    for i, (bar, goal) in enumerate(zip(bars, st.session_state.savings_goals)):
-        height = bar.get_height()
-        ax3.text(bar.get_x() + bar.get_width()/2., height,
+    for autotext in autotexts2:
+        autotext.set_color('white')
+        autotext.set_fontweight('bold')
+
+    with col2:
+        st.markdown("##### Expense Breakdown")
+        st.pyplot(fig2)
+
+    fig3 = None
+    if "savings_goals" in st.session_state and st.session_state.savings_goals:
+        st.markdown("##### Savings Goals Progress")
+        fig3, ax3 = plt.subplots(figsize=(10, 6))
+
+        goal_names = [goal['Goal'] for goal in st.session_state.savings_goals]
+        goal_amounts = [goal['Monthly'] for goal in st.session_state.savings_goals]
+
+        colors3 = ['#0078D4', '#50E6FF', '#7cb342', '#fdd835', '#f06292']
+        bars = ax3.bar(goal_names, goal_amounts, color=colors3[:len(goal_names)], edgecolor='black', linewidth=1.5)
+        ax3.set_ylabel('Monthly Amount ($)', fontsize=13, fontweight='bold')
+        ax3.set_title('Monthly Savings Contributions', fontsize=16, fontweight='bold', pad=20)
+        ax3.tick_params(axis='x', rotation=45, labelsize=10)
+        ax3.grid(axis='y', alpha=0.3, linestyle='--')
+        ax3.set_axisbelow(True)
+
+        for bar, goal in zip(bars, st.session_state.savings_goals):
+            height = bar.get_height()
+            ax3.text(
+                bar.get_x() + bar.get_width() / 2.0,
+                height,
                 f'${height:,.2f}/mo\n{goal["Months"]:.1f} months',
-                ha='center', va='bottom', fontsize=10, fontweight='bold')
-    
-    plt.tight_layout()
-    st.pyplot(fig3)
+                ha='center',
+                va='bottom',
+                fontsize=10,
+                fontweight='bold'
+            )
 
-# 📥 Downloadable & Visual Budget Spreadsheet
-st.subheader("⬇️ Download Your Budget Spreadsheet")
+        plt.tight_layout()
+        st.pyplot(fig3)
 
-# Organize data into sections for better visualization
-income_rows = [
-    {"Section": "Income", "Category": "Main Job (Gross)", "Amount": gross_income},
-    {"Section": "Income", "Category": "VA Benefits", "Amount": va_income}
-]
-income_rows += [
-    {"Section": "Income", "Category": f"Additional Income: {item['Source']}", "Amount": item["Amount"]}
-    for item in st.session_state.additional_income
-]
-income_rows.append({"Section": "Income", "Category": "Total Income", "Amount": total_income})
+    st.subheader("⬇️ Download Your Budget Spreadsheet")
 
-expense_rows = [
-    {"Section": "Expenses", "Category": "Car Payment", "Amount": home},
-    {"Section": "Expenses", "Category": "Car Payment", "Amount": car_payment},
-    {"Section": "Expenses", "Category": "Car Insurance", "Amount": car_insurance},
-    {"Section": "Expenses", "Category": "Phone Bill", "Amount": phone_bill},
-    {"Section": "Expenses", "Category": "Internet Bill", "Amount": internet},
-    {"Section": "Expenses", "Category": "Electricity Bill", "Amount": electricity},
-    {"Section": "Expenses", "Category": "Water Bill", "Amount": water},
-    {"Section": "Expenses", "Category": "Spotify Subscription", "Amount": spotify},
-    {"Section": "Expenses", "Category": "Adobe Subscription", "Amount": adobe},
-    {"Section": "Expenses", "Category": "Digital Ocean Subscription", "Amount": digital_ocean},
-    {"Section": "Expenses", "Category": "Health Insurance", "Amount": health},
-    {"Section": "Expenses", "Category": "Dental Insurance", "Amount": dental},
-    {"Section": "Expenses", "Category": "Vision Insurance", "Amount": vision},
-    {"Section": "Expenses", "Category": "Payroll Taxes (Est.)", "Amount": total_payroll_taxes},
-    {"Section": "Expenses", "Category": "FSA Contribution", "Amount": fsa_monthly},
-    {"Section": "Expenses", "Category": "Retirement Contribution", "Amount": retirement_monthly}
-]
-expense_rows += [
-    {"Section": "Expenses", "Category": f"Additional Expense: {item['Expense']}", "Amount": item["Amount"]}
-    for item in st.session_state.additional_expenses
-]
-expense_rows.append({"Section": "Expenses", "Category": "Total Expenses", "Amount": total_expenses})
+    income_rows = [
+        {"Section": "Income", "Category": "Main Job (Gross)", "Amount": gross_income},
+        {"Section": "Income", "Category": "VA Benefits", "Amount": va_income}
+    ]
+    income_rows += [
+        {"Section": "Income", "Category": f"Additional Income: {item['Source']}", "Amount": item["Amount"]}
+        for item in st.session_state.additional_income
+    ]
+    income_rows.append({"Section": "Income", "Category": "Total Income", "Amount": total_income})
 
-summary_rows = [
-    {"Section": "Summary", "Category": "Net Main Job Income", "Amount": net_main_income},
-    {"Section": "Summary", "Category": "Monthly Surplus", "Amount": surplus}
-]
+    expense_rows = [
+        {"Section": "Expenses", "Category": "Car Payment", "Amount": home},
+        {"Section": "Expenses", "Category": "Car Payment", "Amount": car_payment},
+        {"Section": "Expenses", "Category": "Car Insurance", "Amount": car_insurance},
+        {"Section": "Expenses", "Category": "Phone Bill", "Amount": phone_bill},
+        {"Section": "Expenses", "Category": "Internet Bill", "Amount": internet},
+        {"Section": "Expenses", "Category": "Electricity Bill", "Amount": electricity},
+        {"Section": "Expenses", "Category": "Water Bill", "Amount": water},
+        {"Section": "Expenses", "Category": "Spotify Subscription", "Amount": spotify},
+        {"Section": "Expenses", "Category": "Adobe Subscription", "Amount": adobe},
+        {"Section": "Expenses", "Category": "Digital Ocean Subscription", "Amount": digital_ocean},
+        {"Section": "Expenses", "Category": "Health Insurance", "Amount": health},
+        {"Section": "Expenses", "Category": "Dental Insurance", "Amount": dental},
+        {"Section": "Expenses", "Category": "Vision Insurance", "Amount": vision},
+        {"Section": "Expenses", "Category": "Payroll Taxes (Est.)", "Amount": total_payroll_taxes},
+        {"Section": "Expenses", "Category": "FSA Contribution", "Amount": fsa_monthly},
+        {"Section": "Expenses", "Category": "Retirement Contribution", "Amount": retirement_monthly}
+    ]
+    expense_rows += [
+        {"Section": "Expenses", "Category": f"Additional Expense: {item['Expense']}", "Amount": item["Amount"]}
+        for item in st.session_state.additional_expenses
+    ]
+    expense_rows.append({"Section": "Expenses", "Category": "Total Expenses", "Amount": total_expenses})
 
-savings_rows = []
-if "savings_goals" in st.session_state and st.session_state.savings_goals:
-    for goal in st.session_state.savings_goals:
+    summary_rows = [
+        {"Section": "Summary", "Category": "Net Main Job Income", "Amount": net_main_income},
+        {"Section": "Summary", "Category": "Monthly Surplus", "Amount": surplus}
+    ]
+
+    savings_rows = []
+    if "savings_goals" in st.session_state and st.session_state.savings_goals:
+        for goal in st.session_state.savings_goals:
+            savings_rows.append({
+                "Section": "Savings Goals",
+                "Category": f"{goal['Goal']} (Target: ${goal['Target']:,.2f}, Timeline: {goal['Months']:.1f} months)",
+                "Amount": goal['Monthly']
+            })
+        total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
+        remaining_surplus = surplus - total_savings_allocation
         savings_rows.append({
             "Section": "Savings Goals",
-            "Category": f"{goal['Goal']} (Target: ${goal['Target']:,.2f}, Timeline: {goal['Months']:.1f} months)",
-            "Amount": goal['Monthly']
+            "Category": "Total Savings Allocation",
+            "Amount": total_savings_allocation
         })
-    total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
-    remaining_surplus = surplus - total_savings_allocation
-    savings_rows.append({
-        "Section": "Savings Goals",
-        "Category": "Total Savings Allocation",
-        "Amount": total_savings_allocation
-    })
-    savings_rows.append({
-        "Section": "Savings Goals",
-        "Category": "Remaining Surplus",
-        "Amount": remaining_surplus
-    })
+        savings_rows.append({
+            "Section": "Savings Goals",
+            "Category": "Remaining Surplus",
+            "Amount": remaining_surplus
+        })
 
-# Combine all rows
-export_rows = income_rows + expense_rows + summary_rows + savings_rows
-export_df = pd.DataFrame(export_rows)
+    export_rows = income_rows + expense_rows + summary_rows + savings_rows
+    export_df = pd.DataFrame(export_rows)
 
-# Show a styled preview table
-def highlight_section(row):
-    color = {
-        "Income": "#43c0d1",
-        "Expenses": "#a64957",
-        "Summary": "#a29936",
-        "Savings Goals": "#7cb342"
-    }.get(row.Section, "#ffffff")
-    return [f"background-color: {color}"] * len(row)
+    def highlight_section(row):
+        color = {
+            "Income": "#43c0d1",
+            "Expenses": "#a64957",
+            "Summary": "#a29936",
+            "Savings Goals": "#7cb342"
+        }.get(row.Section, "#ffffff")
+        return [f"background-color: {color}"] * len(row)
 
-st.markdown("##### Preview of Your Budget Spreadsheet")
-st.dataframe(
-    export_df.style.apply(highlight_section, axis=1).format({"Amount": "${:,.2f}"}),
-    use_container_width=True
-)
+    st.markdown("##### Preview of Your Budget Spreadsheet")
+    st.dataframe(
+        export_df.style.apply(highlight_section, axis=1).format({"Amount": "${:,.2f}"}),
+        use_container_width=True
+    )
 
-# Download as Excel with formatting and charts
-def to_excel(df, chart_fig1, chart_fig2, chart_fig3=None):
-    output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-    worksheet = workbook.add_worksheet("Budget")
-    charts_worksheet = workbook.add_worksheet("Visualizations")
+    def to_excel(df, chart_fig1, chart_fig2, chart_fig3=None):
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+        worksheet = workbook.add_worksheet("Budget")
+        charts_worksheet = workbook.add_worksheet("Visualizations")
 
-    # Define formats
-    formats = {
-        "Income": workbook.add_format({'bg_color': '#e0f7fa', 'num_format': '$#,##0.00'}),
-        "Expenses": workbook.add_format({'bg_color': '#ffebee', 'num_format': '$#,##0.00'}),
-        "Savings": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
-        "Savings Goals": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
-        "Summary": workbook.add_format({'bg_color': '#fffde7', 'num_format': '$#,##0.00'}),
-        "Header": workbook.add_format({'bold': True, 'bg_color': '#bdbdbd', 'border': 1}),
-        "Default": workbook.add_format({'num_format': '$#,##0.00'})
-    }
+        formats = {
+            "Income": workbook.add_format({'bg_color': '#e0f7fa', 'num_format': '$#,##0.00'}),
+            "Expenses": workbook.add_format({'bg_color': '#ffebee', 'num_format': '$#,##0.00'}),
+            "Savings": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
+            "Savings Goals": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
+            "Summary": workbook.add_format({'bg_color': '#fffde7', 'num_format': '$#,##0.00'}),
+            "Header": workbook.add_format({'bold': True, 'bg_color': '#bdbdbd', 'border': 1}),
+            "Default": workbook.add_format({'num_format': '$#,##0.00'})
+        }
 
-    # Write header
-    for col_num, value in enumerate(df.columns):
-        worksheet.write(0, col_num, value, formats["Header"])
+        for col_num, value in enumerate(df.columns):
+            worksheet.write(0, col_num, value, formats["Header"])
 
-    # Write data rows
-    for row_num, row in enumerate(df.itertuples(index=False), 1):
-        section = getattr(row, "Section")
-        fmt = formats.get(section, formats["Default"])
-        worksheet.write(row_num, 0, row.Section)
-        worksheet.write(row_num, 1, row.Category)
-        worksheet.write_number(row_num, 2, row.Amount, fmt)
+        for row_num, row in enumerate(df.itertuples(index=False), 1):
+            section = getattr(row, "Section")
+            fmt = formats.get(section, formats["Default"])
+            worksheet.write(row_num, 0, row.Section)
+            worksheet.write(row_num, 1, row.Category)
+            worksheet.write_number(row_num, 2, row.Amount, fmt)
 
-    # Set column widths
-    worksheet.set_column(0, 0, 12)
-    worksheet.set_column(1, 1, 35)
-    worksheet.set_column(2, 2, 18)
-    
-    # Add charts to the visualizations sheet
-    title_format = workbook.add_format({'bold': True, 'font_size': 14, 'color': '#0078D4'})
-    charts_worksheet.write('A1', 'Budget Visualizations', title_format)
-    
-    try:
-        # Save matplotlib figures as images
-        # Save fig1 (Budget Distribution)
-        img1_buffer = io.BytesIO()
-        chart_fig1.savefig(img1_buffer, format='png', dpi=100, bbox_inches='tight')
-        img1_buffer.seek(0)
-        charts_worksheet.insert_image('A3', 'budget_distribution.png', {'image_data': img1_buffer})
-        
-        # Save fig2 (Expense Breakdown)
-        img2_buffer = io.BytesIO()
-        chart_fig2.savefig(img2_buffer, format='png', dpi=100, bbox_inches='tight')
-        img2_buffer.seek(0)
-        charts_worksheet.insert_image('A38', 'expense_breakdown.png', {'image_data': img2_buffer})
-        
-        # Save fig3 (Savings Goals) if it exists
-        if chart_fig3 is not None:
-            img3_buffer = io.BytesIO()
-            chart_fig3.savefig(img3_buffer, format='png', dpi=100, bbox_inches='tight')
-            img3_buffer.seek(0)
-            charts_worksheet.insert_image('A73', 'savings_goals.png', {'image_data': img3_buffer})
-    except Exception as e:
-        # If image export fails, show the error
-        charts_worksheet.write('A3', f'Chart export error: {str(e)}')
-        charts_worksheet.write('A4', 'Charts are available in the web app view.')
-    
-    # Set column width
-    charts_worksheet.set_column(0, 0, 100)
+        worksheet.set_column(0, 0, 12)
+        worksheet.set_column(1, 1, 35)
+        worksheet.set_column(2, 2, 18)
 
-    workbook.close()
-    output.seek(0)
-    return output
+        title_format = workbook.add_format({'bold': True, 'font_size': 14, 'color': '#0078D4'})
+        charts_worksheet.write('A1', 'Budget Visualizations', title_format)
 
-excel_data = to_excel(export_df, fig1, fig2, fig3)
+        try:
+            img1_buffer = io.BytesIO()
+            chart_fig1.savefig(img1_buffer, format='png', dpi=100, bbox_inches='tight')
+            img1_buffer.seek(0)
+            charts_worksheet.insert_image('A3', 'budget_distribution.png', {'image_data': img1_buffer})
 
-st.download_button(
-    label="Download Budget with Visualizations as Excel",
-    data=excel_data,
-    file_name="budget_summary_with_charts.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+            img2_buffer = io.BytesIO()
+            chart_fig2.savefig(img2_buffer, format='png', dpi=100, bbox_inches='tight')
+            img2_buffer.seek(0)
+            charts_worksheet.insert_image('A38', 'expense_breakdown.png', {'image_data': img2_buffer})
+
+            if chart_fig3 is not None:
+                img3_buffer = io.BytesIO()
+                chart_fig3.savefig(img3_buffer, format='png', dpi=100, bbox_inches='tight')
+                img3_buffer.seek(0)
+                charts_worksheet.insert_image('A73', 'savings_goals.png', {'image_data': img3_buffer})
+        except Exception as e:
+            charts_worksheet.write('A3', f'Chart export error: {str(e)}')
+            charts_worksheet.write('A4', 'Charts are available in the web app view.')
+
+        charts_worksheet.set_column(0, 0, 100)
+
+        workbook.close()
+        output.seek(0)
+        return output
+
+    excel_data = to_excel(export_df, fig1, fig2, fig3)
+
+    st.download_button(
+        label="Download Budget with Visualizations as Excel",
+        data=excel_data,
+        file_name="budget_summary_with_charts.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
