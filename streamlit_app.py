@@ -72,13 +72,71 @@ st.title("🧑‍🚀 Chang Family Budgetary Tool")
 st.caption("Track your budget, launch your goals, and orbit financial freedom.")
 
 # 📥 Income & Fixed Expenses
-st.subheader("💰 Monthly Income & Expenses")
+st.subheader("💰 Monthly Income")
 
 # Base income and expenses
 # income
-income = st.number_input("Main job", value=3000.00, format="%.2f")
+gross_income = st.number_input("Main job (gross)", value=5417.00, format="%.2f")
+
+st.markdown("#### 🧾 Payroll Taxes & Contributions")
+state_flat_tax_percent = st.number_input(
+    "State flat tax (%)",
+    min_value=0.0,
+    max_value=20.0,
+    value=4.05,
+    format="%.2f"
+)
+fsa_monthly = st.number_input("FSA monthly contribution", min_value=0.0, format="%.2f")
+retirement_percent = st.number_input(
+    "Retirement contribution (%)",
+    min_value=0.0,
+    max_value=100.0,
+    format="%.2f"
+)
+
+retirement_monthly = gross_income * (retirement_percent / 100.0)
+
+state_tax_rate = state_flat_tax_percent / 100.0
+state_taxable_income = max(0.0, gross_income - fsa_monthly - retirement_monthly)
+state_income_tax = state_taxable_income * state_tax_rate
+
+ss_wage_base_annual = 168600.0
+ss_wage_base_monthly = ss_wage_base_annual / 12.0
+fica_taxable_income = max(0.0, gross_income - fsa_monthly)
+social_security_tax = min(fica_taxable_income, ss_wage_base_monthly) * 0.062
+medicare_tax = fica_taxable_income * 0.0145
+
+total_payroll_taxes = social_security_tax + medicare_tax + state_income_tax
+total_payroll_deductions = total_payroll_taxes + fsa_monthly + retirement_monthly
+net_main_income = gross_income - total_payroll_deductions
+
+
+st.markdown(
+    "**Estimated payroll taxes (simplified):** "
+    f"${total_payroll_taxes:,.2f}"
+)
+st.markdown(
+    f"State income tax: ${state_income_tax:,.2f}"
+)
+st.markdown(
+    f"Social Security: ${social_security_tax:,.2f}"
+)
+st.markdown(
+    f"Medicare: ${medicare_tax:,.2f}"
+)
+st.markdown(
+    "**Estimated net from main job:** "
+    f"${net_main_income:,.2f}"
+)
+st.caption(
+    "Estimates use a flat state tax and standard FICA. "
+    "FSA reduces FICA and state taxable income; retirement reduces state taxable income."
+)
+
 va_income = st.number_input("VA Benefits", value=4158.17, format="%.2f")
 
+# 📥 Income & Fixed Expenses
+st.subheader("💰 Monthly Expenses")
 #expenses
 home = st.number_input("House Payment", value=1469.61, format="%.2f")
 car_payment = st.number_input("Car Payment", value=472.84, format="%.2f")
@@ -159,8 +217,26 @@ else:
     total_additional_expenses = 0
 
 # Calculate totals
-total_income = income + va_income + total_additional_income
-total_expenses = home + car_payment + car_insurance + phone_bill + internet + electricity + water + spotify + adobe + digital_ocean + health + dental + vision + total_additional_expenses
+total_income = gross_income + va_income + total_additional_income
+total_expenses = (
+    home
+    + car_payment
+    + car_insurance
+    + phone_bill
+    + internet
+    + electricity
+    + water
+    + spotify
+    + adobe
+    + digital_ocean
+    + health
+    + dental
+    + vision
+    + total_payroll_taxes
+    + fsa_monthly
+    + retirement_monthly
+    + total_additional_expenses
+)
 surplus = total_income - total_expenses
 
 st.markdown(f"**💵 Total Income:** ${total_income:,.2f}")
@@ -315,6 +391,15 @@ if dental > 0:
 if vision > 0:
     expense_categories.append("Vision Insurance")
     expense_amounts.append(vision)
+if total_payroll_taxes > 0:
+    expense_categories.append("Payroll Taxes (Est.)")
+    expense_amounts.append(total_payroll_taxes)
+if fsa_monthly > 0:
+    expense_categories.append("FSA Contribution")
+    expense_amounts.append(fsa_monthly)
+if retirement_monthly > 0:
+    expense_categories.append("Retirement Contribution")
+    expense_amounts.append(retirement_monthly)
 
 for item in st.session_state.additional_expenses:
     expense_categories.append(item['Expense'])
@@ -389,7 +474,8 @@ st.subheader("⬇️ Download Your Budget Spreadsheet")
 
 # Organize data into sections for better visualization
 income_rows = [
-    {"Section": "Income", "Category": "Base Income", "Amount": income}
+    {"Section": "Income", "Category": "Main Job (Gross)", "Amount": gross_income},
+    {"Section": "Income", "Category": "VA Benefits", "Amount": va_income}
 ]
 income_rows += [
     {"Section": "Income", "Category": f"Additional Income: {item['Source']}", "Amount": item["Amount"]}
@@ -410,7 +496,10 @@ expense_rows = [
     {"Section": "Expenses", "Category": "Digital Ocean Subscription", "Amount": digital_ocean},
     {"Section": "Expenses", "Category": "Health Insurance", "Amount": health},
     {"Section": "Expenses", "Category": "Dental Insurance", "Amount": dental},
-    {"Section": "Expenses", "Category": "Vision Insurance", "Amount": vision}
+    {"Section": "Expenses", "Category": "Vision Insurance", "Amount": vision},
+    {"Section": "Expenses", "Category": "Payroll Taxes (Est.)", "Amount": total_payroll_taxes},
+    {"Section": "Expenses", "Category": "FSA Contribution", "Amount": fsa_monthly},
+    {"Section": "Expenses", "Category": "Retirement Contribution", "Amount": retirement_monthly}
 ]
 expense_rows += [
     {"Section": "Expenses", "Category": f"Additional Expense: {item['Expense']}", "Amount": item["Amount"]}
@@ -419,6 +508,7 @@ expense_rows += [
 expense_rows.append({"Section": "Expenses", "Category": "Total Expenses", "Amount": total_expenses})
 
 summary_rows = [
+    {"Section": "Summary", "Category": "Net Main Job Income", "Amount": net_main_income},
     {"Section": "Summary", "Category": "Monthly Surplus", "Amount": surplus}
 ]
 
