@@ -438,6 +438,10 @@ with tab_report:
     annual_total_withholding = annual_federal_withholding + annual_state_withholding
     annual_total_tax = annual_federal_tax + annual_state_tax
     estimated_refund = annual_total_withholding - annual_total_tax
+    error_percent = 10.0
+    error_percent_amount = abs(estimated_refund) * (error_percent / 100.0)
+    refund_low_pct = estimated_refund - error_percent_amount
+    refund_high_pct = estimated_refund + error_percent_amount
     refund_label = "Estimated refund" if estimated_refund >= 0 else "Estimated amount owed"
     refund_display = f"${abs(estimated_refund):,.2f}"
     refund_explainer = (
@@ -490,10 +494,15 @@ with tab_report:
         f"${annual_total_tax:,.2f} = ${estimated_refund:,.2f}</div>",
         unsafe_allow_html=True
     )
-    st.markdown(" ")
 
+    st.markdown("")
 
     st.metric(refund_label, refund_display)
+    st.markdown(
+        f"<div class='tax-equation'>±{error_percent:.0f}%: "
+        f"${refund_low_pct:,.2f} to ${refund_high_pct:,.2f}</div>",
+        unsafe_allow_html=True
+    )
     st.caption(refund_explainer)
     st.caption(
         "Federal tax uses 2024 brackets with the standard deduction. "
@@ -802,6 +811,12 @@ with tab_report:
             'Total withholdings - total tax liability',
             tax_formats["Note"]
         )
+        tax_worksheet.write('A7', 'Error Range', formats["Header"])
+        tax_worksheet.write(
+            'B7',
+            'Shown as +/-10% of estimated refund/owed',
+            tax_formats["Note"]
+        )
 
         tax_rows = [
             ("Annual Taxable Base (gross - FSA - retirement)", annual_taxable_base, "Base"),
@@ -812,14 +827,16 @@ with tab_report:
             ("Federal Withholding (Annual)", annual_federal_withholding, "Withholding"),
             ("State Withholding (Annual)", annual_state_withholding, "Withholding"),
             ("Total Withholding (Annual)", annual_total_withholding, "Withholding"),
-            ("Estimated Refund / Amount Owed", estimated_refund, "Refund")
+            ("Estimated Refund / Amount Owed", estimated_refund, "Refund"),
+            ("Refund Range (±10%) Low", refund_low_pct, "RefundRange"),
+            ("Refund Range (±10%) High", refund_high_pct, "RefundRange")
         ]
 
-        tax_worksheet.write('A8', 'Category', formats["Header"])
-        tax_worksheet.write('B8', 'Amount', formats["Header"])
-        for idx, (label, amount, category) in enumerate(tax_rows, start=9):
+        tax_worksheet.write('A9', 'Category', formats["Header"])
+        tax_worksheet.write('B9', 'Amount', formats["Header"])
+        for idx, (label, amount, category) in enumerate(tax_rows, start=10):
             tax_worksheet.write(f'A{idx}', label)
-            if category == "Refund":
+            if category in ("Refund", "RefundRange"):
                 refund_format = (
                     tax_formats["RefundPositive"]
                     if amount >= 0
