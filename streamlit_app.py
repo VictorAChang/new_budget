@@ -75,15 +75,24 @@ st.caption("Track your budget, launch your goals, and orbit financial freedom.")
 st.subheader("💰 Monthly Income & Expenses")
 
 # Base income and expenses
-income = st.number_input("Monthly Income", value=4044.91, format="%.2f")
-home = st.number_input("House Payment")
-home_insurance = st.number_input("Home Insurance")
-car_payment = st.number_input("Car Payment")
-car_insurance = st.number_input("Car Insurance")
-phone_bill = st.number_input("Phone Bill")
-internet = st.number_input("Internet Bill")
-electricity = st.number_input("Electricity Bill")
-water = st.number_input("Water Bill")
+# income
+income = st.number_input("Main job", value=3000.00, format="%.2f")
+va_income = st.number_input("VA Benefits", value=4158.17, format="%.2f")
+
+#expenses
+home = st.number_input("House Payment", value=1469.61, format="%.2f")
+car_payment = st.number_input("Car Payment", value=472.84, format="%.2f")
+car_insurance = st.number_input("Car Insurance", value=120.00, format="%.2f")
+phone_bill = st.number_input("Phone Bill", value=140.00, format="%.2f")
+internet = st.number_input("Internet Bill", value=50.00, format="%.2f")
+electricity = st.number_input("Electricity Bill", value=18.00, format="%.2f")
+water = st.number_input("Water Bill", value=50.00, format="%.2f")
+spotify = st.number_input("Spotify Subscription", value=18.18, format="%.2f")
+adobe = st.number_input("Adobe Subscription", value=21.39, format="%.2f")
+digital_ocean = st.number_input("Digital Ocean Subscription", value=8.00, format="%.2f")
+health = st.number_input("Health Insurance", value=100.00, format="%.2f")
+dental = st.number_input("Dental Insurance", value=49.81, format="%.2f")
+vision = st.number_input("Vision Insurance", value=15.43, format="%.2f")
 
 
 
@@ -150,8 +159,8 @@ else:
     total_additional_expenses = 0
 
 # Calculate totals
-total_income = income + total_additional_income
-total_expenses = home + home_insurance + car_payment + car_insurance + phone_bill + internet + electricity + water + total_additional_expenses
+total_income = income + va_income + total_additional_income
+total_expenses = home + car_payment + car_insurance + phone_bill + internet + electricity + water + spotify + adobe + digital_ocean + health + dental + vision + total_additional_expenses
 surplus = total_income - total_expenses
 
 st.markdown(f"**💵 Total Income:** ${total_income:,.2f}")
@@ -270,9 +279,6 @@ expense_amounts = []
 if home > 0:
     expense_categories.append("House Payment")
     expense_amounts.append(home)
-if home_insurance > 0:
-    expense_categories.append("Home Insurance")
-    expense_amounts.append(home_insurance)
 if car_payment > 0:
     expense_categories.append("Car Payment")
     expense_amounts.append(car_payment)
@@ -291,6 +297,24 @@ if electricity > 0:
 if water > 0:
     expense_categories.append("Water")
     expense_amounts.append(water)
+if spotify > 0:
+    expense_categories.append("Spotify Subscription")
+    expense_amounts.append(spotify)
+if adobe > 0:
+    expense_categories.append("Adobe Subscription")
+    expense_amounts.append(adobe)
+if digital_ocean > 0:
+    expense_categories.append("Digital Ocean Subscription")
+    expense_amounts.append(digital_ocean)
+if health > 0:
+    expense_categories.append("Health Insurance")
+    expense_amounts.append(health)
+if dental > 0:
+    expense_categories.append("Dental Insurance")
+    expense_amounts.append(dental)
+if vision > 0:
+    expense_categories.append("Vision Insurance")
+    expense_amounts.append(vision)
 
 for item in st.session_state.additional_expenses:
     expense_categories.append(item['Expense'])
@@ -375,13 +399,18 @@ income_rows.append({"Section": "Income", "Category": "Total Income", "Amount": t
 
 expense_rows = [
     {"Section": "Expenses", "Category": "Car Payment", "Amount": home},
-    {"Section": "Expenses", "Category": "Home Insurance", "Amount": home_insurance},
     {"Section": "Expenses", "Category": "Car Payment", "Amount": car_payment},
     {"Section": "Expenses", "Category": "Car Insurance", "Amount": car_insurance},
     {"Section": "Expenses", "Category": "Phone Bill", "Amount": phone_bill},
     {"Section": "Expenses", "Category": "Internet Bill", "Amount": internet},
     {"Section": "Expenses", "Category": "Electricity Bill", "Amount": electricity},
-    {"Section": "Expenses", "Category": "Water Bill", "Amount": water}
+    {"Section": "Expenses", "Category": "Water Bill", "Amount": water},
+    {"Section": "Expenses", "Category": "Spotify Subscription", "Amount": spotify},
+    {"Section": "Expenses", "Category": "Adobe Subscription", "Amount": adobe},
+    {"Section": "Expenses", "Category": "Digital Ocean Subscription", "Amount": digital_ocean},
+    {"Section": "Expenses", "Category": "Health Insurance", "Amount": health},
+    {"Section": "Expenses", "Category": "Dental Insurance", "Amount": dental},
+    {"Section": "Expenses", "Category": "Vision Insurance", "Amount": vision}
 ]
 expense_rows += [
     {"Section": "Expenses", "Category": f"Additional Expense: {item['Expense']}", "Amount": item["Amount"]}
