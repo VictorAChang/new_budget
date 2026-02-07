@@ -86,6 +86,24 @@ st.markdown("""
         border-left: 4px solid #FFCB05;
         padding-left: 0.75rem;
     }
+    div[data-testid="stMetricValue"],
+    div[data-testid="stMetricValue"] span {
+        color: #00274C !important;
+        background: transparent !important;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #00274C !important;
+    }
+    .tax-equation {
+        color: #00274C;
+        font-family: inherit;
+        font-weight: 600;
+    }
+    .tax-equation span {
+        color: #00274C;
+        font-family: inherit;
+        font-weight: 600;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -109,12 +127,19 @@ with tab_income:
 
     gross_income = st.number_input("Main job (gross)", value=5417.00, format="%.2f")
 
-    st.markdown("#### 🧾 Payroll Taxes & Contributions")
-    state_flat_tax_percent = st.number_input(
-        "State flat tax (%)",
+    st.markdown("#### 🧾 Payroll Withholdings & Contributions")
+    state_withholding_percent = st.number_input(
+        "State withholding / tax rate (%)",
         min_value=0.0,
         max_value=20.0,
         value=4.05,
+        format="%.2f"
+    )
+    federal_withholding_percent = st.number_input(
+        "Federal withholding (%)",
+        min_value=0.0,
+        max_value=40.0,
+        value=12.0,
         format="%.2f"
     )
     fsa_monthly = st.number_input("FSA monthly contribution", min_value=0.0, format="%.2f")
@@ -127,9 +152,11 @@ with tab_income:
 
     retirement_monthly = gross_income * (retirement_percent / 100.0)
 
-    state_tax_rate = state_flat_tax_percent / 100.0
-    state_taxable_income = max(0.0, gross_income - fsa_monthly - retirement_monthly)
-    state_income_tax = state_taxable_income * state_tax_rate
+    state_withholding_rate = state_withholding_percent / 100.0
+    federal_withholding_rate = federal_withholding_percent / 100.0
+    taxable_income = max(0.0, gross_income - fsa_monthly - retirement_monthly)
+    state_withholding = taxable_income * state_withholding_rate
+    federal_withholding = taxable_income * federal_withholding_rate
 
     ss_wage_base_annual = 168600.0
     ss_wage_base_monthly = ss_wage_base_annual / 12.0
@@ -137,15 +164,18 @@ with tab_income:
     social_security_tax = min(fica_taxable_income, ss_wage_base_monthly) * 0.062
     medicare_tax = fica_taxable_income * 0.0145
 
-    total_payroll_taxes = social_security_tax + medicare_tax + state_income_tax
+    total_payroll_taxes = (
+        social_security_tax + medicare_tax + state_withholding + federal_withholding
+    )
     total_payroll_deductions = total_payroll_taxes + fsa_monthly + retirement_monthly
     net_main_income = gross_income - total_payroll_deductions
 
     st.markdown(
-        "**Estimated payroll taxes (simplified):** "
+        "**Estimated payroll withholdings (simplified):** "
         f"${total_payroll_taxes:,.2f}"
     )
-    st.markdown(f"State income tax: ${state_income_tax:,.2f}")
+    st.markdown(f"State withholding: ${state_withholding:,.2f}")
+    st.markdown(f"Federal withholding: ${federal_withholding:,.2f}")
     st.markdown(f"Social Security: ${social_security_tax:,.2f}")
     st.markdown(f"Medicare: ${medicare_tax:,.2f}")
     st.markdown(
@@ -153,8 +183,8 @@ with tab_income:
         f"${net_main_income:,.2f}"
     )
     st.caption(
-        "Estimates use a flat state tax and standard FICA. "
-        "FSA reduces FICA and state taxable income; retirement reduces state taxable income."
+        "Estimates use flat withholding rates and standard FICA. "
+        "FSA and retirement reduce the taxable base used for withholding."
     )
 
     va_income = st.number_input("VA Benefits", value=4158.17, format="%.2f")
@@ -196,7 +226,7 @@ with tab_expenses:
     car_insurance = st.number_input("Car Insurance", value=120.00, format="%.2f")
     phone_bill = st.number_input("Phone Bill", value=140.00, format="%.2f")
     internet = st.number_input("Internet Bill", value=50.00, format="%.2f")
-    electricity = st.number_input("Electricity Bill", value=18.00, format="%.2f")
+    electricity = st.number_input("Electricity Bill", value=180.00, format="%.2f")
     water = st.number_input("Water Bill", value=50.00, format="%.2f")
     spotify = st.number_input("Spotify Subscription", value=18.18, format="%.2f")
     adobe = st.number_input("Adobe Subscription", value=21.39, format="%.2f")
@@ -328,18 +358,6 @@ with tab_savings:
         total_savings_allocation = sum(goal['Monthly'] for goal in st.session_state.savings_goals)
         remaining_surplus = surplus - total_savings_allocation
 
-        st.markdown("---")
-        st.markdown(f"**💰 Total Monthly Savings Allocation:** ${total_savings_allocation:,.2f}")
-        st.markdown(f"**📈 Remaining Surplus After Savings:** ${remaining_surplus:,.2f}")
-
-        if remaining_surplus < 0:
-            st.warning(
-                "⚠️ Warning: Your savings goals exceed your surplus by "
-                f"${abs(remaining_surplus):,.2f}"
-            )
-    else:
-        st.info("No savings goals yet. Create one above to track your progress!")
-
     st.markdown("#### Summary")
     st.metric("Total Monthly Savings", f"${total_savings_allocation:,.2f}")
     st.metric("Remaining Surplus", f"${remaining_surplus:,.2f}")
@@ -349,7 +367,140 @@ with tab_report:
     st.markdown(f"**🧾 Total Expenses:** ${total_expenses:,.2f}")
     st.markdown(f"**📈 Monthly Surplus:** ${surplus:,.2f}")
 
-    st.subheader("📊 Budget Visualizations")
+    st.subheader("🧾 Estimated Tax Return")
+
+    filing_status = st.selectbox(
+        "Filing status",
+        ["Single", "Married filing jointly", "Married filing separately"],
+        index=1
+    )
+
+    def compute_federal_tax_2024(taxable_income, brackets):
+        remaining = taxable_income
+        lower_limit = 0.0
+        tax = 0.0
+        for upper_limit, rate in brackets:
+            if remaining <= 0:
+                break
+            taxable_at_rate = min(remaining, upper_limit - lower_limit)
+            tax += taxable_at_rate * rate
+            remaining -= taxable_at_rate
+            lower_limit = upper_limit
+        return tax
+
+    federal_brackets_by_status = {
+        "Single": [
+            (11600, 0.10),
+            (47150, 0.12),
+            (100525, 0.22),
+            (191950, 0.24),
+            (243725, 0.32),
+            (609350, 0.35),
+            (float("inf"), 0.37)
+        ],
+        "Married filing jointly": [
+            (23200, 0.10),
+            (94300, 0.12),
+            (201050, 0.22),
+            (383900, 0.24),
+            (487450, 0.32),
+            (731200, 0.35),
+            (float("inf"), 0.37)
+        ],
+        "Married filing separately": [
+            (11600, 0.10),
+            (47150, 0.12),
+            (100525, 0.22),
+            (191950, 0.24),
+            (243725, 0.32),
+            (365600, 0.35),
+            (float("inf"), 0.37)
+        ]
+    }
+    standard_deduction_by_status = {
+        "Single": 14600.0,
+        "Married filing jointly": 29200.0,
+        "Married filing separately": 14600.0
+    }
+
+    standard_deduction = standard_deduction_by_status[filing_status]
+    annual_taxable_base = taxable_income * 12.0
+    annual_taxable_income = max(0.0, annual_taxable_base - standard_deduction)
+    annual_federal_tax = compute_federal_tax_2024(
+        annual_taxable_income,
+        federal_brackets_by_status[filing_status]
+    )
+    annual_state_tax = taxable_income * 12.0 * state_withholding_rate
+
+    annual_federal_withholding = federal_withholding * 12.0
+    annual_state_withholding = state_withholding * 12.0
+
+    annual_total_withholding = annual_federal_withholding + annual_state_withholding
+    annual_total_tax = annual_federal_tax + annual_state_tax
+    estimated_refund = annual_total_withholding - annual_total_tax
+    refund_label = "Estimated refund" if estimated_refund >= 0 else "Estimated amount owed"
+    refund_display = f"${abs(estimated_refund):,.2f}"
+    refund_explainer = (
+        "Positive means refund; negative means amount owed."
+    )
+
+    st.markdown("**How this estimate is calculated:**")
+    st.markdown(
+        f"<div class='tax-equation'>Taxable income = annual taxable base - standard deduction = "
+        f"${annual_taxable_base:,.2f} - ${standard_deduction:,.2f} = ${annual_taxable_income:,.2f}</div>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        "Federal tax liability is estimated from this taxable income using 2024 brackets."
+    )
+
+    st.markdown(f"Federal tax liability (est.): ${annual_federal_tax:,.2f}")
+    st.markdown(f"State tax liability (est.): ${annual_state_tax:,.2f}")
+    st.markdown(
+        "State liability uses the flat state rate applied to the annual taxable base."
+    )
+    st.markdown(
+        "<div class='tax-equation'>Total tax liability = federal tax + state tax</div>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        f"<div class='tax-equation'>${annual_federal_tax:,.2f} + "
+        f"${annual_state_tax:,.2f} = ${annual_total_tax:,.2f}</div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("")
+    st.markdown(
+        "<div class='tax-equation'>Total withholdings = federal withholding + state withholding</div>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        f"<div class='tax-equation'>${annual_federal_withholding:,.2f} + "
+        f"${annual_state_withholding:,.2f} = ${annual_total_withholding:,.2f}</div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("")
+    st.markdown(
+        "<div class='tax-equation'>Refund/owed = total withholdings - total tax liability</div>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        f"<div class='tax-equation'>${annual_total_withholding:,.2f} - "
+        f"${annual_total_tax:,.2f} = ${estimated_refund:,.2f}</div>",
+        unsafe_allow_html=True
+    )
+    st.markdown(" ")
+
+
+    st.metric(refund_label, refund_display)
+    st.caption(refund_explainer)
+    st.caption(
+        "Federal tax uses 2024 brackets with the standard deduction. "
+        "State tax uses the same rate as state withholding. Withholdings use your flat % inputs."
+    )
+
+
 
     total_savings_allocation = 0
     if "savings_goals" in st.session_state and st.session_state.savings_goals:
@@ -358,7 +509,6 @@ with tab_report:
     remaining_after_savings = surplus - total_savings_allocation
 
     col1, col2 = st.columns(2)
-
     fig1, ax1 = plt.subplots(figsize=(9, 7))
     colors1 = ['#0078D4', '#a64957', '#7cb342', '#fdd835']
     labels1 = ['Total Income', 'Total Expenses', 'Savings Allocation', 'Remaining']
@@ -426,7 +576,7 @@ with tab_report:
         expense_categories.append("Vision Insurance")
         expense_amounts.append(vision)
     if total_payroll_taxes > 0:
-        expense_categories.append("Payroll Taxes (Est.)")
+        expense_categories.append("Payroll Withholdings (Est.)")
         expense_amounts.append(total_payroll_taxes)
     if fsa_monthly > 0:
         expense_categories.append("FSA Contribution")
@@ -519,7 +669,7 @@ with tab_report:
     income_rows.append({"Section": "Income", "Category": "Total Income", "Amount": total_income})
 
     expense_rows = [
-        {"Section": "Expenses", "Category": "Car Payment", "Amount": home},
+        {"Section": "Expenses", "Category": "House Payment", "Amount": home},
         {"Section": "Expenses", "Category": "Car Payment", "Amount": car_payment},
         {"Section": "Expenses", "Category": "Car Insurance", "Amount": car_insurance},
         {"Section": "Expenses", "Category": "Phone Bill", "Amount": phone_bill},
@@ -532,7 +682,7 @@ with tab_report:
         {"Section": "Expenses", "Category": "Health Insurance", "Amount": health},
         {"Section": "Expenses", "Category": "Dental Insurance", "Amount": dental},
         {"Section": "Expenses", "Category": "Vision Insurance", "Amount": vision},
-        {"Section": "Expenses", "Category": "Payroll Taxes (Est.)", "Amount": total_payroll_taxes},
+        {"Section": "Expenses", "Category": "Payroll Withholdings (Est.)", "Amount": total_payroll_taxes},
         {"Section": "Expenses", "Category": "FSA Contribution", "Amount": fsa_monthly},
         {"Section": "Expenses", "Category": "Retirement Contribution", "Amount": retirement_monthly}
     ]
@@ -591,6 +741,7 @@ with tab_report:
         workbook = xlsxwriter.Workbook(output, {'in_memory': True})
         worksheet = workbook.add_worksheet("Budget")
         charts_worksheet = workbook.add_worksheet("Visualizations")
+        tax_worksheet = workbook.add_worksheet("Estimated Tax Return")
 
         formats = {
             "Income": workbook.add_format({'bg_color': '#e0f7fa', 'num_format': '$#,##0.00'}),
@@ -600,6 +751,16 @@ with tab_report:
             "Summary": workbook.add_format({'bg_color': '#fffde7', 'num_format': '$#,##0.00'}),
             "Header": workbook.add_format({'bold': True, 'bg_color': '#bdbdbd', 'border': 1}),
             "Default": workbook.add_format({'num_format': '$#,##0.00'})
+        }
+        tax_formats = {
+            "Base": workbook.add_format({'bg_color': '#e3f2fd', 'num_format': '$#,##0.00'}),
+            "Deduction": workbook.add_format({'bg_color': '#fff8e1', 'num_format': '$#,##0.00'}),
+            "Taxable": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
+            "Liability": workbook.add_format({'bg_color': '#ffebee', 'num_format': '$#,##0.00'}),
+            "Withholding": workbook.add_format({'bg_color': '#e8f5e9', 'num_format': '$#,##0.00'}),
+            "RefundPositive": workbook.add_format({'font_color': '#1b5e20', 'num_format': '$#,##0.00'}),
+            "RefundNegative": workbook.add_format({'font_color': '#b71c1c', 'num_format': '$#,##0.00'}),
+            "Note": workbook.add_format({'font_color': '#5f6368'})
         }
 
         for col_num, value in enumerate(df.columns):
@@ -618,6 +779,62 @@ with tab_report:
 
         title_format = workbook.add_format({'bold': True, 'font_size': 14, 'color': '#0078D4'})
         charts_worksheet.write('A1', 'Budget Visualizations', title_format)
+
+        tax_worksheet.write('A1', 'Estimated Tax Return (Annual)', title_format)
+        tax_worksheet.write('A3', 'Filing Status', formats["Header"])
+        tax_worksheet.write('B3', filing_status)
+
+        tax_worksheet.write('A4', 'Notes', formats["Header"])
+        tax_worksheet.write(
+            'B4',
+            '2024 brackets + standard deduction; flat withholding rates',
+            tax_formats["Note"]
+        )
+        tax_worksheet.write('A5', 'Tax Liability', formats["Header"])
+        tax_worksheet.write(
+            'B5',
+            'Federal tax liability + state tax liability',
+            tax_formats["Note"]
+        )
+        tax_worksheet.write('A6', 'Refund Formula', formats["Header"])
+        tax_worksheet.write(
+            'B6',
+            'Total withholdings - total tax liability',
+            tax_formats["Note"]
+        )
+
+        tax_rows = [
+            ("Annual Taxable Base (gross - FSA - retirement)", annual_taxable_base, "Base"),
+            ("Standard Deduction (2024)", standard_deduction, "Deduction"),
+            ("Annual Taxable Income", annual_taxable_income, "Taxable"),
+            ("Federal Tax Liability (Est.)", annual_federal_tax, "Liability"),
+            ("State Tax Liability (Est.)", annual_state_tax, "Liability"),
+            ("Federal Withholding (Annual)", annual_federal_withholding, "Withholding"),
+            ("State Withholding (Annual)", annual_state_withholding, "Withholding"),
+            ("Total Withholding (Annual)", annual_total_withholding, "Withholding"),
+            ("Estimated Refund / Amount Owed", estimated_refund, "Refund")
+        ]
+
+        tax_worksheet.write('A8', 'Category', formats["Header"])
+        tax_worksheet.write('B8', 'Amount', formats["Header"])
+        for idx, (label, amount, category) in enumerate(tax_rows, start=9):
+            tax_worksheet.write(f'A{idx}', label)
+            if category == "Refund":
+                refund_format = (
+                    tax_formats["RefundPositive"]
+                    if amount >= 0
+                    else tax_formats["RefundNegative"]
+                )
+                tax_worksheet.write_number(f'B{idx}', amount, refund_format)
+            else:
+                tax_worksheet.write_number(
+                    f'B{idx}',
+                    amount,
+                    tax_formats.get(category, formats["Default"])
+                )
+
+        tax_worksheet.set_column(0, 0, 40)
+        tax_worksheet.set_column(1, 1, 20)
 
         try:
             img1_buffer = io.BytesIO()
